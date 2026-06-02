@@ -33,11 +33,11 @@ public class FileService {
     );
 
     private final FileRepository fileRepository;
-    private final MinioService minioService;
+    private final S3Service s3Service;
 
-    public FileService(FileRepository fileRepository, MinioService minioService) {
+    public FileService(FileRepository fileRepository, S3Service s3Service) {
         this.fileRepository = fileRepository;
-        this.minioService = minioService;
+        this.s3Service = s3Service;
     }
 
     public FileResponse uploadFile(MultipartFile file, User user) {
@@ -46,7 +46,7 @@ public class FileService {
         String originalFilename = file.getOriginalFilename();
         String objectKey = generateObjectKey(originalFilename);
 
-        minioService.uploadFile(file, objectKey);
+        s3Service.uploadFile(file, objectKey);
 
         FileMetadata metadata = new FileMetadata(
                 originalFilename,
@@ -72,7 +72,7 @@ public class FileService {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        String url = minioService.getPresignedUrl(metadata.getObjectKey(), 5);
+        String url = s3Service.getPresignedUrl(metadata.getObjectKey(), 5);
         return new DownloadResponse(url, 300L);
     }
 
@@ -81,7 +81,7 @@ public class FileService {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        minioService.deleteFile(metadata.getObjectKey());
+        s3Service.deleteFile(metadata.getObjectKey());
         fileRepository.delete(metadata);
     }
 
