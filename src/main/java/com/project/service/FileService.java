@@ -1,0 +1,114 @@
+package com.project.service;
+
+import com.project.dto.DownloadResponse;
+import com.project.dto.FileResponse;
+import com.project.model.FileMetadata;
+import com.project.model.User;
+import com.project.repository.FileRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class FileService {
+
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
+    private static final List<String> ALLOWED_TYPES = List.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "video/mp4",
+            "video/mpeg",
+            "application/zip",
+            "application/x-zip-compressed",
+            "text/plain",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
+
+    private final FileRepository fileRepository;
+    private final MinioService minioService;
+
+    public FileService(FileRepository fileRepository, MinioService minioService) {
+        this.fileRepository = fileRepository;
+        this.minioService = minioService;
+    }
+
+    public FileResponse uploadFile(MultipartFile file, User user) {
+        validateFile(file);
+
+        String originalFilename = file.getOriginalFilename();
+        String objectKey = generateObjectKey(originalFilename);
+
+        minioService.uploadFile(file, objectKey);
+
+        FileMetadata metadata = new FileMetadata(
+                originalFilename,
+                objectKey,
+                file.getContentType(),
+                file.getSize(),
+                user
+        );
+
+        fileRepository.save(metadata);
+
+        return toFileResponse(metadata);
+    }
+
+    public List<FileResponse> getUserFiles(User user) {
+        return fileRepository.findAllByUploadedByOrderByUploadedAtDesc(user)
+                .stream()
+                .map(this::toFileResponse)
+                .collect(Collectors.toList());
+    }
+
+    public DownloadResponse getDownloadUrl(Long fileId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+
+        String url = minioService.getPresignedUrl(metadata.getObjectKey(), 5);
+        return new DownloadResponse(url, 300L);
+    }
+
+    @Transactional
+    public void deleteFile(Long fileId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+
+        minioService.deleteFile(metadata.getObjectKey());
+        fileRepository.delete(metadata);
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new RuntimeException("Cannot upload empty file");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("File size exceeds maximum allowed size of 50MB");
+        }
+        if (file.getContentType() == null || !ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new RuntimeException("File type not allowed: " + file.getContentType());
+        }
+    }
+
+    private String generateObjectKey(String originalFilename) {
+        String uuid = UUID.randomUUID().toString().substring(0, 8);
+        return uuid + "_" + originalFilename;
+    }
+
+    private FileResponse toFileResponse(FileMetadata metadata) {
+        return new FileResponse(
+                metadata.getId(),
+                metadata.getOriginalFilename(),
+                metadata.getSize(),
+                metadata.getContentType(),
+                metadata.getUploadedAt()
+        );
+    }
+}

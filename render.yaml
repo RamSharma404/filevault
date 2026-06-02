@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: filevault
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: filevault-db
+          property: connectionString
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: filevault-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: filevault-db
+          property: password
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_BUCKET
+        value: user-files
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: filevault-db
+    databaseName: filestorage
+    plan: free
