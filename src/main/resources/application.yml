@@ -31,3 +31,4 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket: ${MINIO_BUCKET:user-files}
+  region: ${MINIO_REGION:us-east-1}

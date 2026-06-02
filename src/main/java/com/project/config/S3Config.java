@@ -18,12 +18,13 @@ public class S3Config {
     public S3Client s3Client(
             @Value("${minio.url}") String endpoint,
             @Value("${minio.access-key}") String accessKey,
-            @Value("${minio.secret-key}") String secretKey) {
+            @Value("${minio.secret-key}") String secretKey,
+            @Value("${minio.region:us-east-1}") String region) {
         return S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(accessKey, secretKey)))
-                .region(Region.of("us-east-1"))
+                .region(Region.of(region))
                 .forcePathStyle(true)
                 .build();
     }
@@ -32,12 +33,13 @@ public class S3Config {
     public S3Presigner s3Presigner(
             @Value("${minio.url}") String endpoint,
             @Value("${minio.access-key}") String accessKey,
-            @Value("${minio.secret-key}") String secretKey) {
+            @Value("${minio.secret-key}") String secretKey,
+            @Value("${minio.region:us-east-1}") String region) {
         return S3Presigner.builder()
                 .endpointOverride(URI.create(endpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(accessKey, secretKey)))
-                .region(Region.of("us-east-1"))
+                .region(Region.of(region))
                 .build();
     }
 }
