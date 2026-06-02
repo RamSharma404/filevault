@@ -5,9 +5,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.InputStream;
 import java.time.Duration;
@@ -27,7 +27,6 @@ public class S3Service {
     }
 
     public void uploadFile(MultipartFile file, String objectKey) {
-        ensureBucketExists();
         try (InputStream is = file.getInputStream()) {
             s3Client.putObject(PutObjectRequest.builder()
                             .bucket(bucket)
@@ -53,20 +52,12 @@ public class S3Service {
 
     public String getPresignedUrl(String objectKey, int expiryMinutes) {
         try {
-            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(
+            return s3Presigner.presignGetObject(
                     r -> r.signatureDuration(Duration.ofMinutes(expiryMinutes))
-                            .getObjectRequest(ro -> ro.bucket(bucket).key(objectKey)));
-            return presignedRequest.url().toString();
+                            .getObjectRequest(ro -> ro.bucket(bucket).key(objectKey))
+            ).url().toString();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate presigned URL", e);
-        }
-    }
-
-    private void ensureBucketExists() {
-        try {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
-        } catch (NoSuchBucketException e) {
-            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
         }
     }
 }
