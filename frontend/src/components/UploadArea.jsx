@@ -67,7 +67,7 @@ export default function UploadArea({ onUploaded }) {
             </svg>
           </div>
           <p className="upload-title"><strong>Click to upload</strong> or drag and drop</p>
-          <p className="upload-hint">PDF, Images, Videos, Documents (max 50MB)</p>
+          <p className="upload-hint">PDF, Images, Videos, Documents (max 1GB per file, 1GB total quota)</p>
         </div>
       )}
     </div>

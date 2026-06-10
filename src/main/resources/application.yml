@@ -18,8 +18,13 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 50MB
-      max-request-size: 55MB
+      max-file-size: 10GB
+      max-request-size: 11GB
+server:
+  port: 8080
+  tomcat:
+    max-swallow-size: -1
+    connection-timeout: 3600000
 
 app:
   jwt:
@@ -28,6 +33,7 @@ app:
 
 minio:
   url: ${MINIO_URL:http://localhost:9000}
+  public-url: ${MINIO_PUBLIC_URL:http://localhost:9000}
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket: ${MINIO_BUCKET:user-files}

@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Service
 public class FileService {
 
-    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
+    private static final long MAX_QUOTA_SIZE = 1L * 1024 * 1024 * 1024; // 1GB
     private static final List<String> ALLOWED_TYPES = List.of(
             "application/pdf",
             "image/jpeg",
@@ -41,7 +41,7 @@ public class FileService {
     }
 
     public FileResponse uploadFile(MultipartFile file, User user) {
-        validateFile(file);
+        validateFile(file, user);
 
         String originalFilename = file.getOriginalFilename();
         String objectKey = generateObjectKey(originalFilename);
@@ -85,15 +85,17 @@ public class FileService {
         fileRepository.delete(metadata);
     }
 
-    private void validateFile(MultipartFile file) {
+    private void validateFile(MultipartFile file, User user) {
         if (file.isEmpty()) {
             throw new RuntimeException("Cannot upload empty file");
         }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("File size exceeds maximum allowed size of 50MB");
-        }
         if (file.getContentType() == null || !ALLOWED_TYPES.contains(file.getContentType())) {
             throw new RuntimeException("File type not allowed: " + file.getContentType());
+        }
+
+        Long currentUsage = fileRepository.getTotalSizeByUser(user);
+        if (currentUsage + file.getSize() > MAX_QUOTA_SIZE) {
+            throw new RuntimeException("Storage quota exceeded. You can only store up to 1GB of data.");
         }
     }
 

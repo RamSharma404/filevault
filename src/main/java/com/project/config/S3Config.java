@@ -31,12 +31,12 @@ public class S3Config {
 
     @Bean
     public S3Presigner s3Presigner(
-            @Value("${minio.url}") String endpoint,
+            @Value("${minio.public-url}") String publicEndpoint,
             @Value("${minio.access-key}") String accessKey,
             @Value("${minio.secret-key}") String secretKey,
             @Value("${minio.region:us-east-1}") String region) {
         return S3Presigner.builder()
-                .endpointOverride(URI.create(endpoint))
+                .endpointOverride(URI.create(publicEndpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(accessKey, secretKey)))
                 .region(Region.of(region))
