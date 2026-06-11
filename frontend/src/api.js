@@ -28,26 +28,15 @@ async function request(endpoint, options = {}) {
 }
 
 export const auth = {
-  requestOtp: async (email) => {
-    const res = await fetch(`${API_BASE}/auth/request-otp`, {
+  googleAuth: async (token) => {
+    const res = await fetch(`${API_BASE}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ token }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to send code');
-    }
-  },
-  verifyOtp: async (email, otp) => {
-    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, otp }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Invalid code');
+      throw new Error(err.error || 'Authentication failed');
     }
     return res.json();
   },

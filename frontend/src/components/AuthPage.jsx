@@ -3,34 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../api';
 import { toast } from './Toast';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function AuthPage() {
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleRequestOtp = async (e) => {
-    e.preventDefault();
+  const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      await auth.requestOtp(email);
-      setStep(2);
-      toast('Verification code sent to your email');
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await auth.verifyOtp(email, otp);
+      const res = await auth.googleAuth(credentialResponse.credential);
       login(res.token, res.email);
       toast('Authenticated successfully!');
       navigate('/');
@@ -39,6 +22,10 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    toast('Google Sign-In failed', 'error');
   };
 
   return (
@@ -63,55 +50,25 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {step === 1 ? (
-          <form onSubmit={handleRequestOtp} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2rem' }}>
+          {loading ? (
+            <div className="btn-loading" style={{ color: 'var(--text)' }}>
+              <span className="spinner-sm" /> Authenticating...
             </div>
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? (
-                <span className="btn-loading"><span className="spinner-sm" /> Sending code...</span>
-              ) : (
-                'Continue with Email'
-              )}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="otp">Verification Code</label>
-              <input
-                id="otp"
-                type="text"
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                maxLength={6}
-                autoFocus
-                style={{ letterSpacing: '4px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
-              />
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'center' }}>
-                Code sent to {email} <button type="button" onClick={() => setStep(1)} className="btn-ghost" style={{ padding: 0, color: 'var(--primary)' }}>Change</button>
-              </p>
-            </div>
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading || otp.length < 6}>
-              {loading ? (
-                <span className="btn-loading"><span className="spinner-sm" /> Verifying...</span>
-              ) : (
-                'Verify & Login'
-              )}
-            </button>
-          </form>
-        )}
+          ) : (
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="filled_black"
+              shape="pill"
+              size="large"
+              text="continue_with"
+            />
+          )}
+          <p style={{ marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </div>
       </div>
     </div>
   );
