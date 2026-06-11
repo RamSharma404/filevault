@@ -30,6 +30,9 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
+        if (userRepository.count() >= 1) {
+            throw new RuntimeException("Registration is disabled. Only 1 user allowed per instance.");
+        }
         if (userRepository.existsByEmail(request.email())) {
             throw new RuntimeException("Email already registered");
         }

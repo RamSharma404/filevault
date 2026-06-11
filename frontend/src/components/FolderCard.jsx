@@ -21,7 +21,11 @@ export default function FolderCard({ folder, onOpen, onDeleted }) {
 
   return (
     <div className="folder-card" onClick={() => onOpen(folder.id)} onKeyDown={(e) => e.key === 'Enter' && onOpen(folder.id)} tabIndex={0} role="button">
-      <div className="folder-icon">{'\uD83D\uDCC1'}</div>
+      <div className="file-type-icon file-type-folder">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
       <div className="folder-name" title={folder.name}>{folder.name}</div>
       <div className="folder-actions">
         <button className="btn btn-icon btn-icon-danger" onClick={handleDelete} disabled={deleting} title="Delete folder">

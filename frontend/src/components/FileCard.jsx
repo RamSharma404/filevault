@@ -21,15 +21,84 @@ function formatDate(dateStr) {
   });
 }
 
-function getFileIcon(contentType) {
-  if (!contentType) return '\uD83D\uDCC4';
-  if (contentType.startsWith('image/')) return '\uD83D\uDDBC\uFE0F';
-  if (contentType.startsWith('video/')) return '\uD83C\uDFA5';
-  if (contentType.includes('pdf')) return '\uD83D\uDCD1';
-  if (contentType.includes('zip') || contentType.includes('compress')) return '\uD83D\uDCE6';
-  if (contentType.includes('text')) return '\uD83D\uDCDD';
-  if (contentType.includes('word')) return '\uD83D\uDCC3';
-  return '\uD83D\uDCC4';
+function FileIcon({ contentType }) {
+  if (contentType?.startsWith('image/')) {
+    return (
+      <div className="file-type-icon file-type-image">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
+    );
+  }
+  if (contentType?.startsWith('video/')) {
+    return (
+      <div className="file-type-icon file-type-video">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+      </div>
+    );
+  }
+  if (contentType?.includes('pdf')) {
+    return (
+      <div className="file-type-icon file-type-pdf">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+    );
+  }
+  if (contentType?.includes('zip') || contentType?.includes('compress')) {
+    return (
+      <div className="file-type-icon file-type-zip">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+    );
+  }
+  if (contentType?.includes('word') || contentType?.includes('document')) {
+    return (
+      <div className="file-type-icon file-type-doc">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+    );
+  }
+  if (contentType?.includes('text')) {
+    return (
+      <div className="file-type-icon file-type-text">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <div className="file-type-icon file-type-default">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+        <polyline points="13 2 13 9 20 9"/>
+      </svg>
+    </div>
+  );
 }
 
 export default function FileCard({ file, onDeleted }) {
@@ -66,7 +135,7 @@ export default function FileCard({ file, onDeleted }) {
 
   return (
     <div className="file-card">
-      <div className="file-icon">{getFileIcon(file.contentType)}</div>
+      <FileIcon contentType={file.contentType} />
       <div className="file-info">
         <p className="file-name" title={file.originalFilename}>{file.originalFilename}</p>
         <div className="file-meta">

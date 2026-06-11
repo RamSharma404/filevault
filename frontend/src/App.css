@@ -671,57 +671,96 @@
   color: var(--text-muted);
 }
 
-.upload-status {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+/* Upload Progress Card (Google Drive style) */
+.upload-progress-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
   position: relative;
   z-index: 1;
-  width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
 }
 
-.upload-status p {
+.upload-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.upload-progress-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  background: var(--primary-light);
   color: var(--primary);
-  font-weight: 600;
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
 }
 
-.progress-bar-container {
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.upload-progress-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.upload-progress-filename {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upload-progress-stats {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.upload-cancel-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.upload-cancel-btn:hover {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.upload-progress-bar {
   width: 100%;
-  height: 8px;
-  background: var(--bg);
-  border-radius: 4px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
   overflow: hidden;
 }
 
-.progress-bar-fill {
+.upload-progress-bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 2px;
   background: linear-gradient(90deg, var(--primary), #8b5cf6);
-  transition: width 150ms ease;
-  position: relative;
-}
-
-.progress-bar-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: progressShimmer 1.5s infinite;
-}
-
-@keyframes progressShimmer {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
-}
-
-.progress-text {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 500;
+  transition: width 200ms ease;
 }
 
 /* ==============================
@@ -759,13 +798,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.folder-card .folder-icon {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-  width: 44px;
-  text-align: center;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
+
 
 .folder-card .folder-name {
   flex: 1;
@@ -961,6 +994,44 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+/* File Type Icons */
+.file-type-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-type-image { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.file-type-video { background: rgba(168, 85, 247, 0.12); color: #c084fc; }
+.file-type-pdf { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+.file-type-zip { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.file-type-doc { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.file-type-text { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+.file-type-default { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+.file-type-folder { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+
+/* Auth Features */
+.auth-features {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-features span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-radius: 20px;
+  border: 1px solid var(--border);
 }
 
 /* ==============================

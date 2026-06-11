@@ -7,10 +7,10 @@ import { toast } from './Toast';
 
 const FILTERS = [
   { label: 'All', value: 'all' },
-  { label: '\uD83D\uDDBC\uFE0F Images', value: 'image' },
-  { label: '\uD83C\uDFA5 Videos', value: 'video' },
-  { label: '\uD83D\uDCD1 PDFs', value: 'pdf' },
-  { label: '\uD83D\uDCDD Docs', value: 'doc' },
+  { label: 'Images', value: 'image' },
+  { label: 'Videos', value: 'video' },
+  { label: 'PDFs', value: 'pdf' },
+  { label: 'Docs', value: 'doc' },
 ];
 
 function matchesFilter(contentType, filter) {
@@ -114,7 +114,7 @@ export default function Dashboard() {
             <div className="toolbar">
               <div className="toolbar-left">
                 <div className="breadcrumbs">
-                  <button className="breadcrumb-item" onClick={() => navigateToFolder(null)}>{'\uD83C\uDFE0'} Home</button>
+                  <button className="breadcrumb-item" onClick={() => navigateToFolder(null)}>Home</button>
                   {breadcrumbs.map((bc) => (
                     <span key={bc.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span className="breadcrumb-sep">/</span>

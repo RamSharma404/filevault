@@ -31,7 +31,20 @@ public class FileService {
             "application/x-zip-compressed",
             "text/plain",
             "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "video/quicktime",
+            "video/x-msvideo",
+            "video/webm",
+            "image/svg+xml",
+            "image/bmp",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/x-rar-compressed",
+            "application/x-7z-compressed",
+            "application/json",
+            "text/csv"
     );
 
     private final FileRepository fileRepository;

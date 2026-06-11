@@ -41,16 +41,14 @@ export const auth = {
 };
 
 export const files = {
-  upload: (file, folderId, onProgress) => {
+  upload: (file, folderId, onProgress, abortRef) => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      const form = new FormData();
-      form.append('file', file);
-      if (folderId) form.append('folderId', folderId);
+      if (abortRef) abortRef.abort = () => xhr.abort();
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
+          onProgress(Math.round((e.loaded / e.total) * 100), e.loaded, e.total);
         }
       });
 
@@ -68,7 +66,11 @@ export const files = {
       });
 
       xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
-      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+      xhr.addEventListener('abort', () => reject(new Error('__CANCELLED__')));
+
+      const form = new FormData();
+      form.append('file', file);
+      if (folderId) form.append('folderId', folderId);
 
       xhr.open('POST', `${API_BASE}/files/upload`);
       const token = getToken();

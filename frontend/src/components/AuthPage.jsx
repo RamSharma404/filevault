@@ -42,7 +42,12 @@ export default function AuthPage() {
               </svg>
             </div>
             <h1>FileVault</h1>
-            <p className="auth-subtitle">Secure cloud file storage</p>
+            <p className="auth-subtitle">Secure cloud storage • 1GB free per user</p>
+            <div className="auth-features">
+              <span>☁️ Cloud Storage</span>
+              <span>📁 Folders</span>
+              <span>🔒 Encrypted</span>
+            </div>
           </div>
         </div>
 
