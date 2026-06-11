@@ -1,5 +1,6 @@
 package com.project.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,9 @@ public class OtpService {
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private final Random random = new Random();
 
+    @Value("${spring.mail.username:}")
+    private String fromEmail;
+
     public OtpService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -31,6 +35,9 @@ public class OtpService {
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                message.setFrom(fromEmail);
+            }
             message.setTo(email);
             message.setSubject("Your FileVault Login Code");
             message.setText("Your verification code is: " + otp + "\nThis code will expire in 10 minutes.");
