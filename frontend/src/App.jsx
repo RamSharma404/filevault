@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import { ToastContainer } from './components/Toast';
+import './App.css';
 
 export default function App() {
   return (
