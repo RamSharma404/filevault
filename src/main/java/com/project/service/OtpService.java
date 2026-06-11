@@ -43,9 +43,8 @@ public class OtpService {
             message.setText("Your verification code is: " + otp + "\nThis code will expire in 10 minutes.");
             mailSender.send(message);
         } catch (Exception e) {
-            // If SMTP is not configured properly, log it to console so developer can still login
-            System.err.println("Failed to send OTP email to " + email + ". Check SMTP config.");
-            System.err.println("OTP for " + email + " is: " + otp);
+            System.err.println("Failed to send OTP: " + e.getMessage());
+            throw new RuntimeException("SMTP Error: " + e.getMessage());
         }
     }
 
