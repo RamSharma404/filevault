@@ -7,5 +7,6 @@ public record FileResponse(
     String originalFilename,
     Long size,
     String contentType,
-    LocalDateTime uploadedAt
+    LocalDateTime uploadedAt,
+    Long folderId
 ) {}

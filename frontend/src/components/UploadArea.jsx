@@ -2,9 +2,11 @@ import { useState, useRef } from 'react';
 import { files } from '../api';
 import { toast } from './Toast';
 
-export default function UploadArea({ onUploaded }) {
+export default function UploadArea({ onUploaded, currentFolderId }) {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState('');
   const inputRef = useRef();
 
   const handleUpload = async (file) => {
@@ -14,14 +16,18 @@ export default function UploadArea({ onUploaded }) {
       return;
     }
     setUploading(true);
+    setProgress(0);
+    setFileName(file.name);
     try {
-      const result = await files.upload(file);
+      const result = await files.upload(file, currentFolderId, (pct) => setProgress(pct));
       toast(`Uploaded ${result.originalFilename}`);
       onUploaded?.(result);
     } catch (err) {
       toast(err.message, 'error');
     } finally {
       setUploading(false);
+      setProgress(0);
+      setFileName('');
     }
   };
 
@@ -55,7 +61,11 @@ export default function UploadArea({ onUploaded }) {
       {uploading ? (
         <div className="upload-status">
           <div className="spinner" />
-          <p>Uploading...</p>
+          <p>Uploading {fileName}...</p>
+          <div className="progress-bar-container">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="progress-text">{progress}% uploaded</span>
         </div>
       ) : (
         <div className="upload-prompt">

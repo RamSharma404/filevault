@@ -21,7 +21,7 @@ async function request(endpoint, options = {}) {
     : null;
 
   if (!res.ok) {
-    const msg = data?.error || `Request failed with status ${res.status}`;
+    const msg = data?.error || data?.message || `Request failed with status ${res.status}`;
     throw new Error(msg);
   }
   return data;
@@ -41,18 +41,62 @@ export const auth = {
 };
 
 export const files = {
-  upload: (file, onProgress) => {
-    const form = new FormData();
-    form.append('file', file);
-    return request('/files/upload', {
-      method: 'POST',
-      body: form,
+  upload: (file, folderId, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('file', file);
+      if (folderId) form.append('folderId', folderId);
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || err.message || `Upload failed with status ${xhr.status}`));
+          } catch {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+      xhr.open('POST', `${API_BASE}/files/upload`);
+      const token = getToken();
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.send(form);
     });
   },
-  list: () => request('/files'),
+  list: (folderId) => {
+    const params = folderId ? `?folderId=${folderId}` : '';
+    return request(`/files${params}`);
+  },
   download: (id) => request(`/files/${id}/download`),
-  delete: (id) =>
-    request(`/files/${id}`, { method: 'DELETE' }),
+  delete: (id) => request(`/files/${id}`, { method: 'DELETE' }),
+  storageInfo: () => request('/files/storage-info'),
+};
+
+export const folders = {
+  create: (name, parentId) =>
+    request('/folders', {
+      method: 'POST',
+      body: JSON.stringify({ name, parentId: parentId || null }),
+    }),
+  list: (parentId) => {
+    const params = parentId ? `?parentId=${parentId}` : '';
+    return request(`/folders${params}`);
+  },
+  breadcrumbs: (id) => request(`/folders/${id}/breadcrumbs`),
+  delete: (id) => request(`/folders/${id}`, { method: 'DELETE' }),
 };
 
 export function setToken(token) {

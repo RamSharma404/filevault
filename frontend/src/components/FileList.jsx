@@ -1,7 +1,10 @@
 import FileCard from './FileCard';
+import FolderCard from './FolderCard';
 
-export default function FileList({ files, onDeleted }) {
-  if (!files || files.length === 0) {
+export default function FileList({ files, folders: folderList, onDeleted, onFolderOpen, onFolderDeleted }) {
+  const isEmpty = (!files || files.length === 0) && (!folderList || folderList.length === 0);
+
+  if (isEmpty) {
     return (
       <div className="empty-state">
         <div className="empty-icon">
@@ -13,16 +16,27 @@ export default function FileList({ files, onDeleted }) {
           </svg>
         </div>
         <h3>No files yet</h3>
-        <p>Upload your first file to get started</p>
+        <p>Upload your first file or create a folder to get started</p>
       </div>
     );
   }
 
   return (
-    <div className="file-grid">
-      {files.map((f) => (
-        <FileCard key={f.id} file={f} onDeleted={onDeleted} />
-      ))}
+    <div className="content-grid">
+      {folderList && folderList.length > 0 && (
+        <div className="file-grid">
+          {folderList.map((f) => (
+            <FolderCard key={`folder-${f.id}`} folder={f} onOpen={onFolderOpen} onDeleted={onFolderDeleted} />
+          ))}
+        </div>
+      )}
+      {files && files.length > 0 && (
+        <div className="file-grid">
+          {files.map((f) => (
+            <FileCard key={`file-${f.id}`} file={f} onDeleted={onDeleted} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -3,8 +3,10 @@ package com.project.service;
 import com.project.dto.DownloadResponse;
 import com.project.dto.FileResponse;
 import com.project.model.FileMetadata;
+import com.project.model.Folder;
 import com.project.model.User;
 import com.project.repository.FileRepository;
+import com.project.repository.FolderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,14 +35,16 @@ public class FileService {
     );
 
     private final FileRepository fileRepository;
+    private final FolderRepository folderRepository;
     private final S3Service s3Service;
 
-    public FileService(FileRepository fileRepository, S3Service s3Service) {
+    public FileService(FileRepository fileRepository, FolderRepository folderRepository, S3Service s3Service) {
         this.fileRepository = fileRepository;
+        this.folderRepository = folderRepository;
         this.s3Service = s3Service;
     }
 
-    public FileResponse uploadFile(MultipartFile file, User user) {
+    public FileResponse uploadFile(MultipartFile file, User user, Long folderId) {
         validateFile(file, user);
 
         String originalFilename = file.getOriginalFilename();
@@ -48,12 +52,19 @@ public class FileService {
 
         s3Service.uploadFile(file, objectKey);
 
+        Folder folder = null;
+        if (folderId != null) {
+            folder = folderRepository.findByIdAndOwner(folderId, user)
+                    .orElseThrow(() -> new RuntimeException("Folder not found"));
+        }
+
         FileMetadata metadata = new FileMetadata(
                 originalFilename,
                 objectKey,
                 file.getContentType(),
                 file.getSize(),
-                user
+                user,
+                folder
         );
 
         fileRepository.save(metadata);
@@ -61,9 +72,16 @@ public class FileService {
         return toFileResponse(metadata);
     }
 
-    public List<FileResponse> getUserFiles(User user) {
-        return fileRepository.findAllByUploadedByOrderByUploadedAtDesc(user)
-                .stream()
+    public List<FileResponse> getUserFiles(User user, Long folderId) {
+        List<FileMetadata> files;
+        if (folderId == null) {
+            files = fileRepository.findAllByUploadedByAndFolderIsNullOrderByUploadedAtDesc(user);
+        } else {
+            Folder folder = folderRepository.findByIdAndOwner(folderId, user)
+                    .orElseThrow(() -> new RuntimeException("Folder not found"));
+            files = fileRepository.findAllByUploadedByAndFolderOrderByUploadedAtDesc(user, folder);
+        }
+        return files.stream()
                 .map(this::toFileResponse)
                 .collect(Collectors.toList());
     }
@@ -72,7 +90,7 @@ public class FileService {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        String url = s3Service.getPresignedUrl(metadata.getObjectKey(), 5);
+        String url = s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 5);
         return new DownloadResponse(url, 300L);
     }
 
@@ -110,7 +128,8 @@ public class FileService {
                 metadata.getOriginalFilename(),
                 metadata.getSize(),
                 metadata.getContentType(),
-                metadata.getUploadedAt()
+                metadata.getUploadedAt(),
+                metadata.getFolder() != null ? metadata.getFolder().getId() : null
         );
     }
 }

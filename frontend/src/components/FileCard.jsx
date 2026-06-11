@@ -35,16 +35,24 @@ function getFileIcon(contentType) {
 export default function FileCard({ file, onDeleted }) {
   const [deleting, setDeleting] = useState(false);
 
-  const handleDownload = async () => {
+  const handleDownload = async (e) => {
+    e.stopPropagation();
     try {
       const res = await files.download(file.id);
-      window.open(res.url, '_blank');
+      const a = document.createElement('a');
+      a.href = res.url;
+      a.download = file.originalFilename;
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (err) {
       toast(err.message, 'error');
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (e) => {
+    e.stopPropagation();
     setDeleting(true);
     try {
       await files.delete(file.id);

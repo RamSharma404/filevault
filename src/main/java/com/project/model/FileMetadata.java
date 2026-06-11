@@ -27,6 +27,10 @@ public class FileMetadata {
     @JoinColumn(name = "uploaded_by", nullable = false)
     private User uploadedBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    private Folder folder;
+
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 
@@ -38,6 +42,15 @@ public class FileMetadata {
         this.contentType = contentType;
         this.size = size;
         this.uploadedBy = uploadedBy;
+    }
+
+    public FileMetadata(String originalFilename, String objectKey, String contentType, Long size, User uploadedBy, Folder folder) {
+        this.originalFilename = originalFilename;
+        this.objectKey = objectKey;
+        this.contentType = contentType;
+        this.size = size;
+        this.uploadedBy = uploadedBy;
+        this.folder = folder;
     }
 
     @PrePersist
@@ -59,4 +72,6 @@ public class FileMetadata {
     public void setUploadedBy(User uploadedBy) { this.uploadedBy = uploadedBy; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public Folder getFolder() { return folder; }
+    public void setFolder(Folder folder) { this.folder = folder; }
 }

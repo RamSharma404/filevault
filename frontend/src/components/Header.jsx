@@ -1,7 +1,25 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { files } from '../api';
 
-export default function Header() {
+function formatSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+export default function Header({ storageRefresh }) {
   const { user, logout } = useAuth();
+  const [storage, setStorage] = useState({ used: 0, total: 1073741824 });
+
+  useEffect(() => {
+    files.storageInfo().then(setStorage).catch(() => {});
+  }, [storageRefresh]);
+
+  const pct = Math.min(100, Math.round((storage.used / storage.total) * 100));
+  const barClass = pct > 90 ? 'danger' : pct > 70 ? 'warning' : '';
 
   return (
     <header className="header">
@@ -16,6 +34,12 @@ export default function Header() {
         <h2 className="header-title">FileVault</h2>
       </div>
       <div className="header-right">
+        <div className="storage-bar-container">
+          <div className="storage-bar">
+            <div className={`storage-bar-fill ${barClass}`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className="storage-text">{formatSize(storage.used)} / {formatSize(storage.total)}</span>
+        </div>
         <div className="user-badge">
           <div className="user-avatar">{user?.email?.charAt(0).toUpperCase()}</div>
           <span className="user-email">{user?.email}</span>
