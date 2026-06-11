@@ -5,6 +5,8 @@ import com.project.model.Folder;
 import com.project.model.User;
 import com.project.repository.FolderRepository;
 import com.project.repository.FileRepository;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +21,13 @@ public class FolderService {
     private final FolderRepository folderRepository;
     private final FileRepository fileRepository;
     private final S3Service s3Service;
+    private final CacheManager cacheManager;
 
-    public FolderService(FolderRepository folderRepository, FileRepository fileRepository, S3Service s3Service) {
+    public FolderService(FolderRepository folderRepository, FileRepository fileRepository, S3Service s3Service, CacheManager cacheManager) {
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
         this.s3Service = s3Service;
+        this.cacheManager = cacheManager;
     }
 
     public FolderResponse createFolder(String name, Long parentId, User owner) {
@@ -34,9 +38,15 @@ public class FolderService {
         }
         Folder folder = new Folder(name, parent, owner);
         folderRepository.save(folder);
+
+        if (cacheManager.getCache("folders") != null) {
+            cacheManager.getCache("folders").evict(owner.getId() + "-" + (parentId != null ? parentId : "root"));
+        }
+
         return toFolderResponse(folder);
     }
 
+    @Cacheable(value = "folders", key = "#owner.id + '-' + (#parentId != null ? #parentId : 'root')")
     public List<FolderResponse> getFolders(Long parentId, User owner) {
         List<Folder> folders;
         if (parentId == null) {
@@ -49,6 +59,7 @@ public class FolderService {
         return folders.stream().map(this::toFolderResponse).collect(Collectors.toList());
     }
 
+    @Cacheable(value = "breadcrumbs", key = "#owner.id + '-' + #folderId")
     public List<FolderResponse> getBreadcrumbs(Long folderId, User owner) {
         List<FolderResponse> breadcrumbs = new ArrayList<>();
         if (folderId == null) return breadcrumbs;
@@ -75,6 +86,10 @@ public class FolderService {
         folderRepository.findAllByOwnerAndParentOrderByCreatedAtDesc(owner, folder)
                 .forEach(sub -> deleteFolder(sub.getId(), owner));
         folderRepository.delete(folder);
+
+        if (cacheManager.getCache("folders") != null) cacheManager.getCache("folders").clear();
+        if (cacheManager.getCache("files") != null) cacheManager.getCache("files").clear();
+        if (cacheManager.getCache("breadcrumbs") != null) cacheManager.getCache("breadcrumbs").clear();
     }
 
     private FolderResponse toFolderResponse(Folder folder) {

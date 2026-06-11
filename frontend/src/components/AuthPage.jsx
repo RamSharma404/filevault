@@ -5,22 +5,34 @@ import { auth } from '../api';
 import { toast } from './Toast';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = isLogin
-        ? await auth.login(email, password)
-        : await auth.register(email, password);
+      await auth.requestOtp(email);
+      setStep(2);
+      toast('Verification code sent to your email');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await auth.verifyOtp(email, otp);
       login(res.token, res.email);
-      toast(isLogin ? 'Welcome back!' : 'Account created successfully!');
+      toast('Authenticated successfully!');
       navigate('/');
     } catch (err) {
       toast(err.message, 'error');
@@ -51,53 +63,55 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <div className="auth-tabs">
-          <button
-            className={`auth-tab ${isLogin ? 'active' : ''}`}
-            onClick={() => setIsLogin(true)}
-          >
-            Sign In
-          </button>
-          <button
-            className={`auth-tab ${!isLogin ? 'active' : ''}`}
-            onClick={() => setIsLogin(false)}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </div>
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? (
-              <span className="btn-loading"><span className="spinner-sm" /> {isLogin ? 'Signing in...' : 'Creating account...'}</span>
-            ) : (
-              isLogin ? 'Sign In' : 'Create Account'
-            )}
-          </button>
-        </form>
+        {step === 1 ? (
+          <form onSubmit={handleRequestOtp} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+              {loading ? (
+                <span className="btn-loading"><span className="spinner-sm" /> Sending code...</span>
+              ) : (
+                'Continue with Email'
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="otp">Verification Code</label>
+              <input
+                id="otp"
+                type="text"
+                placeholder="Enter 6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                required
+                maxLength={6}
+                autoFocus
+                style={{ letterSpacing: '4px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
+              />
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'center' }}>
+                Code sent to {email} <button type="button" onClick={() => setStep(1)} className="btn-ghost" style={{ padding: 0, color: 'var(--primary)' }}>Change</button>
+              </p>
+            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading || otp.length < 6}>
+              {loading ? (
+                <span className="btn-loading"><span className="spinner-sm" /> Verifying...</span>
+              ) : (
+                'Verify & Login'
+              )}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

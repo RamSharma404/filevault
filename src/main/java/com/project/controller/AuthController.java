@@ -1,8 +1,8 @@
 package com.project.controller;
 
 import com.project.dto.AuthResponse;
-import com.project.dto.LoginRequest;
-import com.project.dto.RegisterRequest;
+import com.project.dto.OtpRequest;
+import com.project.dto.VerifyOtpRequest;
 import com.project.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +18,14 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+    @PostMapping("/request-otp")
+    public ResponseEntity<Void> requestOtp(@Valid @RequestBody OtpRequest request) {
+        authService.requestOtp(request.email());
+        return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    @PostMapping("/verify-otp")
+    public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return ResponseEntity.ok(authService.verifyOtp(request.email(), request.otp()));
     }
 }

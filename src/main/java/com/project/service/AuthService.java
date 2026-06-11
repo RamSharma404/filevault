@@ -1,15 +1,12 @@
 package com.project.service;
 
 import com.project.dto.AuthResponse;
-import com.project.dto.LoginRequest;
-import com.project.dto.RegisterRequest;
 import com.project.model.User;
 import com.project.repository.UserRepository;
 import com.project.security.JwtUtil;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -17,39 +14,35 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
-                       AuthenticationManager authenticationManager) {
+                       OtpService otpService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
-        this.authenticationManager = authenticationManager;
+        this.otpService = otpService;
     }
 
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.count() >= 1) {
-            throw new RuntimeException("Registration is disabled. Only 1 user allowed per instance.");
-        }
-        if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email already registered");
+    public void requestOtp(String email) {
+        otpService.generateAndSendOtp(email);
+    }
+
+    public AuthResponse verifyOtp(String email, String otp) {
+        if (!otpService.verifyOtp(email, otp)) {
+            throw new RuntimeException("Invalid or expired code");
         }
 
-        User user = new User(request.email(), passwordEncoder.encode(request.password()));
-        userRepository.save(user);
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            // Register new user with a random unguessable password
+            user = new User(email, passwordEncoder.encode(UUID.randomUUID().toString()));
+            userRepository.save(user);
+        }
 
         String token = jwtUtil.generateToken(user.getEmail());
         return new AuthResponse(token, user.getEmail());
-    }
-
-    public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(), request.password()));
-
-        String token = jwtUtil.generateToken(request.email());
-        return new AuthResponse(token, request.email());
     }
 }

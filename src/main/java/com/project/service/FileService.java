@@ -7,6 +7,8 @@ import com.project.model.Folder;
 import com.project.model.User;
 import com.project.repository.FileRepository;
 import com.project.repository.FolderRepository;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,11 +52,13 @@ public class FileService {
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
     private final S3Service s3Service;
+    private final CacheManager cacheManager;
 
-    public FileService(FileRepository fileRepository, FolderRepository folderRepository, S3Service s3Service) {
+    public FileService(FileRepository fileRepository, FolderRepository folderRepository, S3Service s3Service, CacheManager cacheManager) {
         this.fileRepository = fileRepository;
         this.folderRepository = folderRepository;
         this.s3Service = s3Service;
+        this.cacheManager = cacheManager;
     }
 
     public FileResponse uploadFile(MultipartFile file, User user, Long folderId) {
@@ -82,9 +86,14 @@ public class FileService {
 
         fileRepository.save(metadata);
 
+        if (cacheManager.getCache("files") != null) {
+            cacheManager.getCache("files").evict(user.getId() + "-" + (folderId != null ? folderId : "root"));
+        }
+
         return toFileResponse(metadata);
     }
 
+    @Cacheable(value = "files", key = "#user.id + '-' + (#folderId != null ? #folderId : 'root')")
     public List<FileResponse> getUserFiles(User user, Long folderId) {
         List<FileMetadata> files;
         if (folderId == null) {
@@ -107,6 +116,14 @@ public class FileService {
         return new DownloadResponse(url, 300L);
     }
 
+    public String getShareUrl(Long fileId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+
+        // Generate a URL valid for 7 days (10080 minutes)
+        return s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 10080);
+    }
+
     @Transactional
     public void deleteFile(Long fileId, User user) {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
@@ -114,6 +131,11 @@ public class FileService {
 
         s3Service.deleteFile(metadata.getObjectKey());
         fileRepository.delete(metadata);
+
+        Long fId = metadata.getFolder() != null ? metadata.getFolder().getId() : null;
+        if (cacheManager.getCache("files") != null) {
+            cacheManager.getCache("files").evict(user.getId() + "-" + (fId != null ? fId : "root"));
+        }
     }
 
     private void validateFile(MultipartFile file, User user) {

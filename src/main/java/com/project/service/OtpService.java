@@ -1,0 +1,53 @@
+package com.project.service;
+
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+@Service
+public class OtpService {
+
+    private final JavaMailSender mailSender;
+    private final ConcurrentHashMap<String, String> otpStorage = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private final Random random = new Random();
+
+    public OtpService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    public void generateAndSendOtp(String email) {
+        String otp = String.format("%06d", random.nextInt(1000000));
+        otpStorage.put(email, otp);
+
+        // Schedule expiration after 10 minutes
+        executor.schedule(() -> otpStorage.remove(email, otp), 10, TimeUnit.MINUTES);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Your FileVault Login Code");
+            message.setText("Your verification code is: " + otp + "\nThis code will expire in 10 minutes.");
+            mailSender.send(message);
+        } catch (Exception e) {
+            // If SMTP is not configured properly, log it to console so developer can still login
+            System.err.println("Failed to send OTP email to " + email + ". Check SMTP config.");
+            System.err.println("OTP for " + email + " is: " + otp);
+        }
+    }
+
+    public boolean verifyOtp(String email, String otp) {
+        String storedOtp = otpStorage.get(email);
+        if (storedOtp != null && storedOtp.equals(otp)) {
+            otpStorage.remove(email); // consume OTP
+            return true;
+        }
+        return false;
+    }
+}

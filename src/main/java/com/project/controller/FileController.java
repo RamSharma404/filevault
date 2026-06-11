@@ -53,6 +53,15 @@ public class FileController {
         return ResponseEntity.ok(fileService.getDownloadUrl(id, user));
     }
 
+    @GetMapping("/{id}/share")
+    public ResponseEntity<DownloadResponse> shareFile(
+            @PathVariable Long id,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        String url = fileService.getShareUrl(id, user);
+        return ResponseEntity.ok(new DownloadResponse(url, 10080L * 60L));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFile(
             @PathVariable Long id,

@@ -1,5 +1,6 @@
 package com.project.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 public record FileResponse(
@@ -9,4 +10,4 @@ public record FileResponse(
     String contentType,
     LocalDateTime uploadedAt,
     Long folderId
-) {}
+) implements Serializable {}

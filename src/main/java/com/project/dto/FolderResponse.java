@@ -1,5 +1,6 @@
 package com.project.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 public record FolderResponse(
@@ -7,4 +8,4 @@ public record FolderResponse(
     String name,
     Long parentId,
     LocalDateTime createdAt
-) {}
+) implements Serializable {}

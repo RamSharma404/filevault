@@ -28,16 +28,29 @@ async function request(endpoint, options = {}) {
 }
 
 export const auth = {
-  register: (email, password) =>
-    request('/auth/register', {
+  requestOtp: async (email) => {
+    const res = await fetch(`${API_BASE}/auth/request-otp`, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
-  login: (email, password) =>
-    request('/auth/login', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to send code');
+    }
+  },
+  verifyOtp: async (email, otp) => {
+    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Invalid code');
+    }
+    return res.json();
+  },
 };
 
 export const files = {
@@ -83,6 +96,7 @@ export const files = {
     return request(`/files${params}`);
   },
   download: (id) => request(`/files/${id}/download`),
+  share: (id) => request(`/files/${id}/share`),
   delete: (id) => request(`/files/${id}`, { method: 'DELETE' }),
   storageInfo: () => request('/files/storage-info'),
 };
