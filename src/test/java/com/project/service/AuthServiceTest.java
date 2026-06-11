@@ -1,8 +1,6 @@
 package com.project.service;
 
 import com.project.dto.AuthResponse;
-import com.project.dto.LoginRequest;
-import com.project.dto.RegisterRequest;
 import com.project.model.User;
 import com.project.repository.UserRepository;
 import com.project.security.JwtUtil;
@@ -11,8 +9,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -31,20 +30,26 @@ class AuthServiceTest {
     private JwtUtil jwtUtil;
 
     @Mock
-    private AuthenticationManager authenticationManager;
+    private OtpService otpService;
 
     @InjectMocks
     private AuthService authService;
 
     @Test
-    void shouldRegisterUser() {
-        RegisterRequest request = new RegisterRequest("test@example.com", "password123");
+    void shouldRequestOtp() {
+        doNothing().when(otpService).generateAndSendOtp(anyString());
+        authService.requestOtp("test@example.com");
+        verify(otpService).generateAndSendOtp("test@example.com");
+    }
 
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+    @Test
+    void shouldVerifyOtpNewUser() {
+        when(otpService.verifyOtp(anyString(), anyString())).thenReturn(true);
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(jwtUtil.generateToken(anyString())).thenReturn("token");
 
-        AuthResponse response = authService.register(request);
+        AuthResponse response = authService.verifyOtp("test@example.com", "123456");
 
         assertNotNull(response);
         assertEquals("test@example.com", response.email());
@@ -53,22 +58,9 @@ class AuthServiceTest {
     }
 
     @Test
-    void shouldThrowWhenEmailExists() {
-        RegisterRequest request = new RegisterRequest("exists@example.com", "password123");
-        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+    void shouldThrowWhenInvalidOtp() {
+        when(otpService.verifyOtp(anyString(), anyString())).thenReturn(false);
 
-        assertThrows(RuntimeException.class, () -> authService.register(request));
-    }
-
-    @Test
-    void shouldLoginUser() {
-        LoginRequest request = new LoginRequest("test@example.com", "password123");
-        when(jwtUtil.generateToken(anyString())).thenReturn("token");
-
-        AuthResponse response = authService.login(request);
-
-        assertNotNull(response);
-        assertEquals("test@example.com", response.email());
-        assertEquals("token", response.token());
+        assertThrows(RuntimeException.class, () -> authService.verifyOtp("test@example.com", "wrong"));
     }
 }
