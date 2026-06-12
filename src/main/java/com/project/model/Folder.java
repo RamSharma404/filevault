@@ -1,10 +1,12 @@
 package com.project.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "folders")
+@SQLRestriction("deleted_at IS NULL")
 public class Folder {
 
     @Id
@@ -22,6 +24,12 @@ public class Folder {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    @Column(nullable = false)
+    private String path = "/";
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -38,6 +46,18 @@ public class Folder {
         this.createdAt = LocalDateTime.now();
     }
 
+    /**
+     * Computes the materialized path after the entity is persisted and has an ID.
+     * Must be called explicitly after save() since @PostPersist runs before flush.
+     */
+    public void computePath() {
+        if (this.parent != null) {
+            this.path = this.parent.getPath() + this.id + "/";
+        } else {
+            this.path = "/" + this.id + "/";
+        }
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -46,6 +66,10 @@ public class Folder {
     public void setParent(Folder parent) { this.parent = parent; }
     public User getOwner() { return owner; }
     public void setOwner(User owner) { this.owner = owner; }
+    public String getPath() { return path; }
+    public void setPath(String path) { this.path = path; }
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

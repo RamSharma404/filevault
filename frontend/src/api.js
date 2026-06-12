@@ -91,20 +91,26 @@ export const files = {
   share: (id, isDownload = false) => request(`/files/${id}/share?download=${isDownload}`),
   delete: (id) => request(`/files/${id}`, { method: 'DELETE' }),
   storageInfo: () => request('/files/storage-info'),
+  getVersions: (id) => request(`/files/${id}/versions`),
+  restoreVersion: (id, versionId) => request(`/files/${id}/versions/${versionId}/restore`, { method: 'POST' }),
+  downloadVersion: (id, versionId) => request(`/files/${id}/versions/${versionId}/download`),
 };
 
 export const folders = {
-  create: (name, parentId) =>
-    request('/folders', {
-      method: 'POST',
-      body: JSON.stringify({ name, parentId: parentId || null }),
-    }),
-  list: (parentId) => {
-    const params = parentId ? `?parentId=${parentId}` : '';
-    return request(`/folders${params}`);
-  },
+  create: (name, parentId) => request('/folders', { method: 'POST', body: JSON.stringify({ name, parentId }) }),
+  list: (parentId) => request(`/folders${parentId ? `?parentId=${parentId}` : ''}`),
   breadcrumbs: (id) => request(`/folders/${id}/breadcrumbs`),
   delete: (id) => request(`/folders/${id}`, { method: 'DELETE' }),
+  move: (id, newParentId) => request(`/folders/${id}/move`, { method: 'PUT', body: JSON.stringify({ newParentId }) }),
+};
+
+export const trash = {
+  listFiles: () => request('/trash/files'),
+  listFolders: () => request('/trash/folders'),
+  restoreFile: (id) => request(`/trash/files/${id}/restore`, { method: 'POST' }),
+  restoreFolder: (id) => request(`/trash/folders/${id}/restore`, { method: 'POST' }),
+  permanentlyDeleteFile: (id) => request(`/trash/files/${id}`, { method: 'DELETE' }),
+  permanentlyDeleteFolder: (id) => request(`/trash/folders/${id}`, { method: 'DELETE' }),
 };
 
 export function setToken(token) {

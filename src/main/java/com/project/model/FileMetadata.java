@@ -1,10 +1,12 @@
 package com.project.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "files")
+@SQLRestriction("deleted_at IS NULL")
 public class FileMetadata {
 
     @Id
@@ -20,6 +22,12 @@ public class FileMetadata {
     @Column(name = "content_type")
     private String contentType;
 
+    @Column(name = "thumbnail_key")
+    private String thumbnailKey;
+
+    @Column(name = "current_version", nullable = false)
+    private Integer currentVersion = 1;
+
     @Column(nullable = false)
     private Long size;
 
@@ -30,6 +38,9 @@ public class FileMetadata {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
     private Folder folder;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
@@ -66,6 +77,10 @@ public class FileMetadata {
     public void setObjectKey(String objectKey) { this.objectKey = objectKey; }
     public String getContentType() { return contentType; }
     public void setContentType(String contentType) { this.contentType = contentType; }
+    public String getThumbnailKey() { return thumbnailKey; }
+    public void setThumbnailKey(String thumbnailKey) { this.thumbnailKey = thumbnailKey; }
+    public Integer getCurrentVersion() { return currentVersion; }
+    public void setCurrentVersion(Integer currentVersion) { this.currentVersion = currentVersion; }
     public Long getSize() { return size; }
     public void setSize(Long size) { this.size = size; }
     public User getUploadedBy() { return uploadedBy; }
@@ -74,4 +89,6 @@ public class FileMetadata {
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
     public Folder getFolder() { return folder; }
     public void setFolder(Folder folder) { this.folder = folder; }
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }

@@ -3,6 +3,7 @@ import { files, folders } from '../api';
 import Header from './Header';
 import UploadArea from './UploadArea';
 import FileList from './FileList';
+import TrashView from './TrashView';
 import { toast } from './Toast';
 
 const FILTERS = [
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [storageRefresh, setStorageRefresh] = useState(0);
+  const [showTrash, setShowTrash] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -154,6 +156,9 @@ export default function Dashboard() {
                   <button className="btn btn-secondary btn-sm" onClick={() => setShowNewFolder(true)}>
                     + New Folder
                   </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowTrash(true)} title="View Trash">
+                    🗑️ Trash
+                  </button>
                   <span className="file-count">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>
                 </div>
               </div>
@@ -219,6 +224,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {showTrash && <TrashView onClose={() => { setShowTrash(false); loadContents(currentFolderId, debouncedSearch); }} />}
     </div>
   );
 }

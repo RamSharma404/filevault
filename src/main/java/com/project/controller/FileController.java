@@ -3,6 +3,7 @@ package com.project.controller;
 import com.project.annotation.RateLimit;
 import com.project.dto.DownloadResponse;
 import com.project.dto.FileResponse;
+import com.project.dto.FileVersionResponse;
 import com.project.model.User;
 import com.project.repository.FileRepository;
 import com.project.repository.UserRepository;
@@ -76,6 +77,32 @@ public class FileController {
         User user = getAuthenticatedUser(authentication);
         fileService.deleteFile(id, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<FileVersionResponse>> getFileVersions(
+            @PathVariable Long id,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        return ResponseEntity.ok(fileService.getFileVersions(id, user));
+    }
+
+    @PostMapping("/{id}/versions/{versionId}/restore")
+    public ResponseEntity<FileResponse> restoreVersion(
+            @PathVariable Long id,
+            @PathVariable Long versionId,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        return ResponseEntity.ok(fileService.restoreVersion(id, versionId, user));
+    }
+
+    @GetMapping("/{id}/versions/{versionId}/download")
+    public ResponseEntity<DownloadResponse> downloadVersion(
+            @PathVariable Long id,
+            @PathVariable Long versionId,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        return ResponseEntity.ok(fileService.getVersionDownloadUrl(id, versionId, user));
     }
 
     @GetMapping("/storage-info")

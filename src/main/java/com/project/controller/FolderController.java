@@ -58,6 +58,16 @@ public class FolderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/move")
+    public ResponseEntity<FolderResponse> moveFolder(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        Long newParentId = body.get("newParentId") != null ? Long.valueOf(body.get("newParentId").toString()) : null;
+        return ResponseEntity.ok(folderService.moveFolder(id, newParentId, user));
+    }
+
     private User getAuthenticatedUser(Authentication authentication) {
         String email = authentication.getName();
         return userRepository.findByEmail(email)

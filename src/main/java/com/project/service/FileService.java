@@ -2,17 +2,23 @@ package com.project.service;
 
 import com.project.dto.DownloadResponse;
 import com.project.dto.FileResponse;
+import com.project.dto.FileVersionResponse;
 import com.project.model.FileMetadata;
+import com.project.model.FileVersion;
 import com.project.model.Folder;
 import com.project.model.User;
 import com.project.repository.FileRepository;
+import com.project.repository.FileVersionRepository;
 import com.project.repository.FolderRepository;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,23 +30,25 @@ public class FileService {
 
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
+    private final FileVersionRepository fileVersionRepository;
     private final S3Service s3Service;
     private final CacheManager cacheManager;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
-    public FileService(FileRepository fileRepository, FolderRepository folderRepository, S3Service s3Service, CacheManager cacheManager) {
+    public FileService(FileRepository fileRepository, FolderRepository folderRepository, FileVersionRepository fileVersionRepository, S3Service s3Service, CacheManager cacheManager, org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
         this.fileRepository = fileRepository;
         this.folderRepository = folderRepository;
+        this.fileVersionRepository = fileVersionRepository;
         this.s3Service = s3Service;
         this.cacheManager = cacheManager;
+        this.redisTemplate = redisTemplate;
     }
 
+    @Transactional
     public FileResponse uploadFile(MultipartFile file, User user, Long folderId) {
         validateFile(file, user);
 
         String originalFilename = file.getOriginalFilename();
-        String objectKey = generateObjectKey(originalFilename);
-
-        s3Service.uploadFile(file, objectKey);
 
         Folder folder = null;
         if (folderId != null) {
@@ -48,22 +56,86 @@ public class FileService {
                     .orElseThrow(() -> new RuntimeException("Folder not found"));
         }
 
-        FileMetadata metadata = new FileMetadata(
-                originalFilename,
-                objectKey,
-                file.getContentType(),
-                file.getSize(),
-                user,
-                folder
-        );
+        // Check if file already exists in this folder for this user
+        FileMetadata existingMetadata = folder == null
+            ? fileRepository.findByOriginalFilenameAndFolderIsNullAndUploadedBy(originalFilename, user).orElse(null)
+            : fileRepository.findByOriginalFilenameAndFolderAndUploadedBy(originalFilename, folder, user).orElse(null);
 
-        fileRepository.save(metadata);
+        String objectKey = generateObjectKey(originalFilename);
+        s3Service.uploadFile(file, objectKey);
+
+        FileMetadata metadataToReturn;
+
+        if (existingMetadata != null) {
+            // Save current state as a version
+            FileVersion version = new FileVersion(
+                existingMetadata, 
+                existingMetadata.getObjectKey(), 
+                existingMetadata.getContentType(), 
+                existingMetadata.getSize(), 
+                existingMetadata.getUploadedAt(),
+                existingMetadata.getCurrentVersion()
+            );
+            fileVersionRepository.save(version);
+
+            // Update metadata with new file
+            existingMetadata.setObjectKey(objectKey);
+            existingMetadata.setContentType(file.getContentType());
+            existingMetadata.setSize(file.getSize());
+            existingMetadata.setUploadedAt(LocalDateTime.now());
+            existingMetadata.setCurrentVersion(existingMetadata.getCurrentVersion() + 1);
+
+            metadataToReturn = fileRepository.save(existingMetadata);
+
+            // Prune old versions (keep max 4 versions in history, + 1 current = 5)
+            List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByUploadedAtDesc(existingMetadata);
+            if (versions.size() > 4) {
+                List<FileVersion> toDelete = versions.subList(4, versions.size());
+                for (FileVersion v : toDelete) {
+                    final String keyToDelete = v.getObjectKey();
+                    // Delete from S3 only after DB transaction commits
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                s3Service.deleteFile(keyToDelete);
+                            } catch(Exception e) {}
+                        }
+                    });
+                    fileVersionRepository.delete(v);
+                }
+            }
+        } else {
+            FileMetadata newMetadata = new FileMetadata(
+                    originalFilename,
+                    objectKey,
+                    file.getContentType(),
+                    file.getSize(),
+                    user,
+                    folder
+            );
+            metadataToReturn = fileRepository.save(newMetadata);
+        }
 
         if (cacheManager.getCache("files") != null) {
             cacheManager.getCache("files").evict(user.getId() + "-" + (folderId != null ? folderId : "root"));
         }
 
-        return toFileResponse(metadata);
+        // Push to thumbnail generation queue if it's an allowed image type
+        if (file.getContentType() != null && 
+            (file.getContentType().equals("image/jpeg") || 
+             file.getContentType().equals("image/png") || 
+             file.getContentType().equals("image/webp"))) {
+            try {
+                java.util.Map<String, Object> job = new java.util.HashMap<>();
+                job.put("fileId", metadataToReturn.getId());
+                job.put("attempt", 1);
+                String jobJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(job);
+                redisTemplate.opsForList().leftPush("thumbnail_queue", jobJson);
+            } catch(Exception e) {}
+        }
+
+        return toFileResponse(metadataToReturn);
     }
 
     @Cacheable(value = "files", key = "#user.id + '-' + (#folderId != null ? #folderId : 'root')")
@@ -112,13 +184,77 @@ public class FileService {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        s3Service.deleteFile(metadata.getObjectKey());
-        fileRepository.delete(metadata);
+        // Soft delete — set deletedAt instead of removing from S3
+        metadata.setDeletedAt(LocalDateTime.now());
+        fileRepository.save(metadata);
 
         Long fId = metadata.getFolder() != null ? metadata.getFolder().getId() : null;
         if (cacheManager.getCache("files") != null) {
             cacheManager.getCache("files").evict(user.getId() + "-" + (fId != null ? fId : "root"));
         }
+    }
+
+    public List<FileVersionResponse> getFileVersions(Long fileId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+        return fileVersionRepository.findAllByFileOrderByUploadedAtDesc(metadata).stream()
+                .map(v -> new FileVersionResponse(v.getId(), v.getFile().getId(), v.getSize(), v.getContentType(), v.getUploadedAt(), v.getVersionNumber()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public FileResponse restoreVersion(Long fileId, Long versionId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+                
+        FileVersion versionToRestore = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+                
+        if (!versionToRestore.getFile().getId().equals(metadata.getId())) {
+            throw new RuntimeException("Version does not belong to this file");
+        }
+        
+        // Swap current state into a new version record
+        FileVersion newVersion = new FileVersion(
+            metadata, 
+            metadata.getObjectKey(), 
+            metadata.getContentType(), 
+            metadata.getSize(), 
+            metadata.getUploadedAt(),
+            metadata.getCurrentVersion()
+        );
+        fileVersionRepository.save(newVersion);
+        
+        // Restore metadata
+        metadata.setObjectKey(versionToRestore.getObjectKey());
+        metadata.setContentType(versionToRestore.getContentType());
+        metadata.setSize(versionToRestore.getSize());
+        metadata.setUploadedAt(LocalDateTime.now());
+        metadata.setCurrentVersion(versionToRestore.getVersionNumber());
+        fileRepository.save(metadata);
+        
+        // Delete the restored version record
+        fileVersionRepository.delete(versionToRestore);
+        
+        Long fId = metadata.getFolder() != null ? metadata.getFolder().getId() : null;
+        if (cacheManager.getCache("files") != null) {
+            cacheManager.getCache("files").evict(user.getId() + "-" + (fId != null ? fId : "root"));
+        }
+        
+        return toFileResponse(metadata);
+    }
+    
+    public DownloadResponse getVersionDownloadUrl(Long fileId, Long versionId, User user) {
+        FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied"));
+        FileVersion version = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+        if (!version.getFile().getId().equals(metadata.getId())) {
+            throw new RuntimeException("Version does not belong to this file");
+        }
+
+        String url = s3Service.getPresignedUrl(version.getObjectKey(), metadata.getOriginalFilename(), 5, true);
+        return new DownloadResponse(url, 300L);
     }
 
     private void validateFile(MultipartFile file, User user) {
@@ -138,13 +274,22 @@ public class FileService {
     }
 
     private FileResponse toFileResponse(FileMetadata metadata) {
+        String thumbnailUrl = null;
+        if (metadata.getThumbnailKey() != null) {
+            try {
+                // Generate a public-read presigned URL for the thumbnail, valid for 1 hour
+                thumbnailUrl = s3Service.getPresignedUrl(metadata.getThumbnailKey(), metadata.getOriginalFilename() + "_thumb.jpg", 60, false);
+            } catch (Exception e) {}
+        }
         return new FileResponse(
                 metadata.getId(),
                 metadata.getOriginalFilename(),
                 metadata.getSize(),
                 metadata.getContentType(),
                 metadata.getUploadedAt(),
-                metadata.getFolder() != null ? metadata.getFolder().getId() : null
+                metadata.getFolder() != null ? metadata.getFolder().getId() : null,
+                metadata.getDeletedAt(),
+                thumbnailUrl
         );
     }
 }

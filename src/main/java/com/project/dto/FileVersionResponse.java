@@ -3,13 +3,11 @@ package com.project.dto;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public record FileResponse(
+public record FileVersionResponse(
     Long id,
-    String originalFilename,
+    Long fileId,
     Long size,
     String contentType,
     LocalDateTime uploadedAt,
-    Long folderId,
-    LocalDateTime deletedAt,
-    String thumbnailUrl
+    Integer versionNumber
 ) implements Serializable {}

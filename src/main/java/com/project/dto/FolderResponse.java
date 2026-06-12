@@ -7,5 +7,6 @@ public record FolderResponse(
     Long id,
     String name,
     Long parentId,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    LocalDateTime deletedAt
 ) implements Serializable {}

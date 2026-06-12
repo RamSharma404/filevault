@@ -1273,3 +1273,121 @@
     padding-bottom: 4px;
   }
 }
+
+/* Trash Modal */
+.trash-modal {
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modal-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.trash-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.trash-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.trash-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.trash-body {
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.trash-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-light);
+  gap: 16px;
+  transition: background-color 0.2s;
+}
+
+.trash-item:hover {
+  background-color: var(--surface-hover);
+}
+
+.trash-item:last-child {
+  border-bottom: none;
+}
+
+.trash-item-icon {
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  background-color: var(--surface-alt);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trash-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trash-item-name {
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trash-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.trash-countdown {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.trash-countdown.urgent {
+  color: #ef4444;
+}
+
+.trash-item-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.trash-item:hover .trash-item-actions {
+  opacity: 1;
+}
