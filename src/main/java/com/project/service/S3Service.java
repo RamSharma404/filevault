@@ -35,7 +35,7 @@ public class S3Service {
 
     public void uploadFile(MultipartFile file, String objectKey) {
         long fileSize = file.getSize();
-        long partSize = 50 * 1024 * 1024; // 50MB chunks for faster uploads
+        long partSize = 10 * 1024 * 1024; // 10MB chunks for lower memory footprint
 
         if (fileSize <= partSize) {
             // Standard single put for small files

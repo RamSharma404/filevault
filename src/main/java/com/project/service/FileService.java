@@ -21,33 +21,6 @@ import java.util.stream.Collectors;
 public class FileService {
 
     private static final long MAX_QUOTA_SIZE = 1L * 1024 * 1024 * 1024; // 1GB
-    private static final List<String> ALLOWED_TYPES = List.of(
-            "application/pdf",
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-            "video/mp4",
-            "video/mpeg",
-            "application/zip",
-            "application/x-zip-compressed",
-            "text/plain",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "video/quicktime",
-            "video/x-msvideo",
-            "video/webm",
-            "image/svg+xml",
-            "image/bmp",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-powerpoint",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "application/x-rar-compressed",
-            "application/x-7z-compressed",
-            "application/json",
-            "text/csv"
-    );
 
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
@@ -141,9 +114,6 @@ public class FileService {
     private void validateFile(MultipartFile file, User user) {
         if (file.isEmpty()) {
             throw new RuntimeException("Cannot upload empty file");
-        }
-        if (file.getContentType() == null || !ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new RuntimeException("File type not allowed: " + file.getContentType());
         }
 
         Long currentUsage = fileRepository.getTotalSizeByUser(user);
