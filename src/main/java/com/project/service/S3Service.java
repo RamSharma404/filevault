@@ -99,12 +99,13 @@ public class S3Service {
         }
     }
 
-    public String getPresignedUrl(String objectKey, String filename, int expiryMinutes) {
+    public String getPresignedUrl(String objectKey, String filename, int expiryMinutes, boolean isDownload) {
         try {
+            String disposition = isDownload ? "attachment; filename=\"" + filename + "\"" : "inline; filename=\"" + filename + "\"";
             return s3Presigner.presignGetObject(
                     r -> r.signatureDuration(Duration.ofMinutes(expiryMinutes))
                             .getObjectRequest(ro -> ro.bucket(bucket).key(objectKey)
-                                    .responseContentDisposition("attachment; filename=\"" + filename + "\""))
+                                    .responseContentDisposition(disposition))
             ).url().toString();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate presigned URL", e);

@@ -81,20 +81,30 @@ public class FileService {
                 .collect(Collectors.toList());
     }
 
+    public List<FileResponse> searchFiles(User user, String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return fileRepository.findAllByUploadedByAndOriginalFilenameContainingIgnoreCaseOrderByUploadedAtDesc(user, query.trim())
+                .stream()
+                .map(this::toFileResponse)
+                .collect(Collectors.toList());
+    }
+
     public DownloadResponse getDownloadUrl(Long fileId, User user) {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        String url = s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 5);
+        String url = s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 5, true);
         return new DownloadResponse(url, 300L);
     }
 
-    public String getShareUrl(Long fileId, User user) {
+    public String getShareUrl(Long fileId, User user, boolean isDownload) {
         FileMetadata metadata = fileRepository.findByIdAndUploadedBy(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found or access denied"));
 
-        // Generate a URL valid for 7 days (10080 minutes)
-        return s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 10080);
+        // Generate a URL valid for 1 hour (60 minutes)
+        return s3Service.getPresignedUrl(metadata.getObjectKey(), metadata.getOriginalFilename(), 60, isDownload);
     }
 
     @Transactional

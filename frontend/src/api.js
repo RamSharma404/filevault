@@ -80,12 +80,15 @@ export const files = {
       xhr.send(form);
     });
   },
-  list: (folderId) => {
-    const params = folderId ? `?folderId=${folderId}` : '';
-    return request(`/files${params}`);
+  list: (folderId, searchQuery = '') => {
+    const params = new URLSearchParams();
+    if (folderId) params.append('folderId', folderId);
+    if (searchQuery) params.append('search', searchQuery);
+    const qs = params.toString();
+    return request(`/files${qs ? '?' + qs : ''}`);
   },
   download: (id) => request(`/files/${id}/download`),
-  share: (id) => request(`/files/${id}/share`),
+  share: (id, isDownload = false) => request(`/files/${id}/share?download=${isDownload}`),
   delete: (id) => request(`/files/${id}`, { method: 'DELETE' }),
   storageInfo: () => request('/files/storage-info'),
 };

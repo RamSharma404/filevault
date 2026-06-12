@@ -1,5 +1,6 @@
 package com.project.controller;
 
+import com.project.annotation.RateLimit;
 import com.project.dto.DownloadResponse;
 import com.project.dto.FileResponse;
 import com.project.model.User;
@@ -28,6 +29,7 @@ public class FileController {
         this.fileRepository = fileRepository;
     }
 
+    @RateLimit(requests = 10, windowSeconds = 60)
     @PostMapping("/upload")
     public ResponseEntity<FileResponse> uploadFile(
             @RequestParam("file") MultipartFile file,
@@ -40,8 +42,12 @@ public class FileController {
     @GetMapping
     public ResponseEntity<List<FileResponse>> listFiles(
             @RequestParam(value = "folderId", required = false) Long folderId,
+            @RequestParam(value = "search", required = false) String search,
             Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
+        if (search != null && !search.trim().isEmpty()) {
+            return ResponseEntity.ok(fileService.searchFiles(user, search));
+        }
         return ResponseEntity.ok(fileService.getUserFiles(user, folderId));
     }
 
@@ -56,10 +62,11 @@ public class FileController {
     @GetMapping("/{id}/share")
     public ResponseEntity<DownloadResponse> shareFile(
             @PathVariable Long id,
+            @RequestParam(value = "download", defaultValue = "false") boolean isDownload,
             Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
-        String url = fileService.getShareUrl(id, user);
-        return ResponseEntity.ok(new DownloadResponse(url, 10080L * 60L));
+        String url = fileService.getShareUrl(id, user, isDownload);
+        return ResponseEntity.ok(new DownloadResponse(url, 3600L));
     }
 
     @DeleteMapping("/{id}")

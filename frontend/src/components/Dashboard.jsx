@@ -34,17 +34,31 @@ export default function Dashboard() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [storageRefresh, setStorageRefresh] = useState(0);
 
-  const loadContents = useCallback(async (folderId) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const loadContents = useCallback(async (folderId, search) => {
     setLoading(true);
     try {
-      const [fileData, folderData] = await Promise.all([
-        files.list(folderId),
-        folders.list(folderId),
-      ]);
+      const fileData = await files.list(folderId, search);
       setFileList(fileData || []);
-      setFolderList(folderData || []);
 
-      if (folderId) {
+      if (!search) {
+        const folderData = await folders.list(folderId);
+        setFolderList(folderData || []);
+      } else {
+        setFolderList([]); // Hide folders when searching
+      }
+
+      if (folderId && !search) {
         const bc = await folders.breadcrumbs(folderId);
         setBreadcrumbs(bc || []);
       } else {
@@ -58,8 +72,8 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadContents(currentFolderId);
-  }, [currentFolderId, loadContents]);
+    loadContents(currentFolderId, debouncedSearch);
+  }, [currentFolderId, debouncedSearch, loadContents]);
 
   const navigateToFolder = (folderId) => {
     setCurrentFolderId(folderId);
@@ -129,10 +143,19 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="toolbar-right">
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowNewFolder(true)}>
-                  + New Folder
-                </button>
-                <span className="file-count">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search files..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowNewFolder(true)}>
+                    + New Folder
+                  </button>
+                  <span className="file-count">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>
+                </div>
               </div>
             </div>
 

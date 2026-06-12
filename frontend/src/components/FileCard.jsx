@@ -133,56 +133,124 @@ export default function FileCard({ file, onDeleted }) {
     }
   };
 
-  const handleShare = async (e) => {
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [isDownloadLink, setIsDownloadLink] = useState(false);
+  const [loadingShare, setLoadingShare] = useState(false);
+
+  const handleShareClick = async (e) => {
     e.stopPropagation();
+    setShowShareModal(true);
+    setShareLink('');
+    await generateShareLink(false);
+  };
+
+  const generateShareLink = async (downloadFlag) => {
+    setLoadingShare(true);
+    setIsDownloadLink(downloadFlag);
     try {
-      const res = await files.share(file.id);
-      await navigator.clipboard.writeText(res.url);
-      toast('Share link copied to clipboard!');
+      const res = await files.share(file.id, downloadFlag);
+      setShareLink(res.url);
     } catch (err) {
       toast(err.message, 'error');
+    } finally {
+      setLoadingShare(false);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      toast('Share link copied to clipboard!');
+      setShowShareModal(false);
+    } catch (err) {
+      toast('Failed to copy link', 'error');
     }
   };
 
   return (
-    <div className="file-card">
-      <FileIcon contentType={file.contentType} />
-      <div className="file-info">
-        <p className="file-name" title={file.originalFilename}>{file.originalFilename}</p>
-        <div className="file-meta">
-          <span>{formatSize(file.size)}</span>
-          <span className="meta-sep">&middot;</span>
-          <span>{formatDate(file.uploadedAt)}</span>
+    <>
+      <div className="file-card">
+        <FileIcon contentType={file.contentType} />
+        <div className="file-info">
+          <p className="file-name" title={file.originalFilename}>{file.originalFilename}</p>
+          <div className="file-meta">
+            <span>{formatSize(file.size)}</span>
+            <span className="meta-sep">&middot;</span>
+            <span>{formatDate(file.uploadedAt)}</span>
+          </div>
+        </div>
+        <div className="file-actions">
+          <button className="btn btn-icon" onClick={handleShareClick} title="Share">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <button className="btn btn-icon" onClick={handleDownload} title="Download">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button className="btn btn-icon btn-icon-danger" onClick={handleDelete} disabled={deleting} title="Delete">
+            {deleting ? (
+              <span className="spinner-xs" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            )}
+          </button>
         </div>
       </div>
-      <div className="file-actions">
-        <button className="btn btn-icon" onClick={handleShare} title="Copy Share Link">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-        </button>
-        <button className="btn btn-icon" onClick={handleDownload} title="Download">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </button>
-        <button className="btn btn-icon btn-icon-danger" onClick={handleDelete} disabled={deleting} title="Delete">
-          {deleting ? (
-            <span className="spinner-xs" />
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          )}
-        </button>
-      </div>
-    </div>
+
+      {showShareModal && (
+        <div className="dialog-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-header">
+              <h3>Share "{file.originalFilename}"</h3>
+            </div>
+            <div className="dialog-body">
+              <p style={{ marginBottom: '16px' }}>Anyone with this link can access the file for 1 hour.</p>
+              
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <button 
+                  className={`btn btn-sm ${!isDownloadLink ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => generateShareLink(false)}
+                >
+                  View Only
+                </button>
+                <button 
+                  className={`btn btn-sm ${isDownloadLink ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => generateShareLink(true)}
+                >
+                  Direct Download
+                </button>
+              </div>
+
+              <input 
+                type="text" 
+                value={loadingShare ? 'Generating link...' : shareLink} 
+                readOnly 
+                onClick={(e) => e.target.select()}
+              />
+            </div>
+            <div className="dialog-footer">
+              <button className="btn btn-secondary" onClick={() => setShowShareModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={copyShareLink} disabled={loadingShare || !shareLink}>
+                Copy Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
